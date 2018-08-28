@@ -8,6 +8,6 @@ LOCAL_PATH      := $(NDK_PROJECT_PATH)
 LOCAL_MODULE    := libnative
 LOCAL_CFLAGS    := -Werror
 LOCAL_SRC_FILES := NativeCode.cc
-LOCAL_LDLIBS    := -llog
+LOCAL_LDLIBS    := -llog -lGLESv2
 
 include $(BUILD_SHARED_LIBRARY)
