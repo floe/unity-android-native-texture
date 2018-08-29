@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <GLES2/gl2.h>
 
+#include "camera_utils.h"
+
 typedef void (*UnityRenderingEvent)(int eventId);
 
 // --------------------------------------------------------------------------
@@ -27,6 +29,10 @@ extern "C" void SetTextureFromUnity(void* textureHandle, int w, int h)
 	g_TextureHandle = textureHandle;
 	g_TextureWidth = w;
 	g_TextureHeight = h;
+
+	ACameraManager* cm = ACameraManager_create();
+	PrintCameras(cm);
+	ACameraManager_delete(cm);
 }
 
 static void ModifyTexturePixels()
