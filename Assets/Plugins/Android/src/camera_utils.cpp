@@ -23,7 +23,7 @@
 #include "native_debug.h"
 #include "camera_utils.h"
 
-#define UKNOWN_TAG "UNKNOW_TAG"
+#define UNKNOWN_TAG "UNKNOWN_TAG"
 #define MAKE_PAIR(val) std::make_pair(val, #val)
 template <typename T>
 const char* GetPairStr(T key, std::vector<std::pair<T, const char*>>& store) {
@@ -33,8 +33,8 @@ const char* GetPairStr(T key, std::vector<std::pair<T, const char*>>& store) {
       return it->second;
     }
   }
-  LOGW("(%#08x) : UNKNOWN_TAG for %s", key, typeid(store[0].first).name());
-  return UKNOWN_TAG;
+  LOGW("(%#08x) : UNKNOWN_TAG for %s", key, "i_dont_want_rtti");
+  return UNKNOWN_TAG;
 }
 
 /*
