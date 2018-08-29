@@ -1,6 +1,7 @@
 # unity-android-native-texture
 
-Minimal example of how to dynamically update a texture in Unity on Android from native C++ code.
+Minimal example of how to dynamically update a texture in Unity on Android from native C++ code.  
+Should also work on Linux deployments with minimal changes, not tested yet.
 
 Built/tested with:
   - Unity 2018.2.4f1
