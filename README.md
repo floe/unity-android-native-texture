@@ -10,4 +10,5 @@ Built/tested with:
 
 Sources:
   - https://docs.unity3d.com/Manual/AndroidNativePlugins.html
+  - https://stackoverflow.com/questions/35027043/implementing-android-6-0-permissions-in-unity3d
   - https://bitbucket.org/Unity-Technologies/graphicsdemos/src/364ac57cea5c197ca9b7015ba29dcc1ff94c9f61/NativeRenderingPlugin?at=default 

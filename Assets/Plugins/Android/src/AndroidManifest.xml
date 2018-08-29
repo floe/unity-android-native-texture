@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- minimal dummy manifest to request camera permission -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.floe.unity_android_native_texture.permissions">
+  <uses-feature android:name="android.hardware.camera" />
+  <uses-permission android:name="android.permission.CAMERA" />
+</manifest>
