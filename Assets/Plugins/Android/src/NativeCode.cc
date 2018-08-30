@@ -3,9 +3,103 @@
 #include <stdlib.h>
 #include <GLES2/gl2.h>
 
+#include <camera/NdkCameraDevice.h>
+#include <camera/NdkCameraCaptureSession.h>
+#include <camera/NdkCaptureRequest.h>
+#include <media/NdkImage.h>
+#include <media/NdkImageReader.h>
+
+#include "native_debug.h"
 #include "camera_utils.h"
 
 typedef void (*UnityRenderingEvent)(int eventId);
+
+// NDK Camera API objects (phew ';-)
+ACameraManager* manager;
+ACameraDevice* device;
+AImageReader* reader;
+ANativeWindow* window;
+ACaptureSessionOutput* target;
+ACaptureSessionOutputContainer* outputs;
+ACameraCaptureSession* session;
+ACaptureRequest* requests[1];
+
+// device state callbacks
+static ACameraDevice_stateCallbacks camera_callbacks = {
+	.context = nullptr,
+	.onDisconnected = nullptr,
+	.onError = nullptr,
+};
+
+// capture session state callbacks
+void OnSessionClosed(void* ctx, ACameraCaptureSession* ses) { LOGW("session %p closed", ses); }
+void OnSessionReady (void* ctx, ACameraCaptureSession* ses) { LOGW("session %p ready",  ses); }
+void OnSessionActive(void* ctx, ACameraCaptureSession* ses) { LOGW("session %p active", ses); }
+
+static ACameraCaptureSession_stateCallbacks session_callbacks = {
+	.context = nullptr,
+	.onActive = OnSessionActive,
+	.onReady = OnSessionReady,
+	.onClosed = OnSessionClosed,
+};
+
+// capture state callbacks
+static ACameraCaptureSession_captureCallbacks capture_callbacks = {
+	.context = nullptr,
+	.onCaptureStarted = nullptr,
+	.onCaptureProgressed = nullptr,
+	.onCaptureCompleted = nullptr,
+	.onCaptureFailed = nullptr,
+	.onCaptureSequenceCompleted = nullptr,
+	.onCaptureSequenceAborted = nullptr,
+	.onCaptureBufferLost = nullptr,
+};
+
+
+void start_camera() {
+
+	manager = ACameraManager_create();
+	PrintCameras(manager);
+
+	ACameraManager_openCamera( manager, "0", &camera_callbacks, &device );
+
+	// ImageReader -> NativeWindow -> SessionOutput
+	AImageReader_new( 1280, 720, AIMAGE_FORMAT_YUV_420_888, 1, &reader );
+	AImageReader_getWindow( reader, &window ); // no need to free/release
+	ACaptureSessionOutput_create( window, &target );
+	// TODO: set callback on image reader
+
+	// create an output container with a single target
+	ACaptureSessionOutputContainer_create( &outputs );
+	ACaptureSessionOutputContainer_add( outputs, target );
+
+	// create the capture session & repeating request
+	ACameraDevice_createCaptureSession( device, outputs, &session_callbacks, &session );
+	ACameraDevice_createCaptureRequest( device, TEMPLATE_PREVIEW, requests );
+
+	// TODO: tweak the capture request?
+
+	// start the actual capture (yay!) int sequence;
+	ACameraCaptureSession_setRepeatingRequest( session, &capture_callbacks, 1, requests, NULL ); // &sequence );
+}
+
+
+void stop_camera() {
+
+	ACameraCaptureSession_stopRepeating(session);
+
+	ACaptureRequest_free(requests[0]);
+	ACameraCaptureSession_close(session);
+
+	ACaptureSessionOutput_free(target);
+	ACaptureSessionOutputContainer_free(outputs);
+
+	AImageReader_delete(reader);
+	ACameraDevice_close(device);
+	ACameraManager_delete(manager);
+}
+
+
 
 // --------------------------------------------------------------------------
 // SetTimeFromUnity, an example function we export which is called by one of the scripts.
@@ -30,9 +124,9 @@ extern "C" void SetTextureFromUnity(void* textureHandle, int w, int h)
 	g_TextureWidth = w;
 	g_TextureHeight = h;
 
-	ACameraManager* cm = ACameraManager_create();
-	PrintCameras(cm);
-	ACameraManager_delete(cm);
+	manager = ACameraManager_create();
+	PrintCameras(manager);
+	ACameraManager_delete(manager);
 }
 
 static void ModifyTexturePixels()
