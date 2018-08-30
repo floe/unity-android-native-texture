@@ -3,108 +3,11 @@
 #include <stdlib.h>
 #include <GLES2/gl2.h>
 
-#include <camera/NdkCameraDevice.h>
-#include <camera/NdkCameraCaptureSession.h>
-#include <camera/NdkCaptureRequest.h>
 #include <media/NdkImage.h>
-#include <media/NdkImageReader.h>
 
-#include "native_debug.h"
-#include "camera_utils.h"
+#include "camera_wrapper.h"
 
 typedef void (*UnityRenderingEvent)(int eventId);
-
-// NDK Camera API objects (phew ';-)
-ACameraManager* manager;
-ACameraDevice* device;
-AImageReader* reader;
-ANativeWindow* window;
-ACaptureSessionOutput* output;
-ACameraOutputTarget* target;
-ACaptureSessionOutputContainer* outputs;
-ACameraCaptureSession* session;
-ACaptureRequest* requests[1];
-
-// device state callbacks
-static ACameraDevice_stateCallbacks camera_callbacks = {
-	.context = nullptr,
-	.onDisconnected = nullptr,
-	.onError = nullptr,
-};
-
-// capture session state callbacks
-void OnSessionClosed(void* ctx, ACameraCaptureSession* ses) { LOGW("session %p closed", ses); }
-void OnSessionReady (void* ctx, ACameraCaptureSession* ses) { LOGW("session %p ready",  ses); }
-void OnSessionActive(void* ctx, ACameraCaptureSession* ses) { LOGW("session %p active", ses); }
-
-static ACameraCaptureSession_stateCallbacks session_callbacks = {
-	.context = nullptr,
-	.onActive = OnSessionActive,
-	.onReady = OnSessionReady,
-	.onClosed = OnSessionClosed,
-};
-
-// capture state callbacks
-static ACameraCaptureSession_captureCallbacks capture_callbacks = {
-	.context = nullptr,
-	.onCaptureStarted = nullptr,
-	.onCaptureProgressed = nullptr,
-	.onCaptureCompleted = nullptr,
-	.onCaptureFailed = nullptr,
-	.onCaptureSequenceCompleted = nullptr,
-	.onCaptureSequenceAborted = nullptr,
-	.onCaptureBufferLost = nullptr,
-};
-
-
-void start_camera() {
-
-	manager = ACameraManager_create();
-	//PrintCameras(manager);
-
-	int res = ACameraManager_openCamera( manager, "0", &camera_callbacks, &device ); PrintCameraDeviceError(res);
-
-	// ImageReader -> NativeWindow -> SessionOutput
-	res = AImageReader_new( 1280, 720, AIMAGE_FORMAT_YUV_420_888, 2, &reader ); PrintCameraDeviceError(res);
-	res = AImageReader_getWindow( reader, &window );  PrintCameraDeviceError(res);// no need to free/release
-	res = ACaptureSessionOutput_create( window, &output ); PrintCameraDeviceError(res);
-	// TODO: set callback on image reader
-
-	// create an output container with a single output
-	res = ACaptureSessionOutputContainer_create( &outputs ); PrintCameraDeviceError(res);
-	res = ACaptureSessionOutputContainer_add( outputs, output ); PrintCameraDeviceError(res);
-
-	// create the capture session & repeating request
-	res = ACameraDevice_createCaptureSession( device, outputs, &session_callbacks, &session ); PrintCameraDeviceError(res);
-	res = ACameraDevice_createCaptureRequest( device, TEMPLATE_PREVIEW, requests ); PrintCameraDeviceError(res);
-
-	// add target window to request, too
-	res = ACameraOutputTarget_create( window, &target ); PrintCameraDeviceError(res);
-	res = ACaptureRequest_addTarget( requests[0], target ); PrintCameraDeviceError(res);
-
-	// TODO: tweak the capture request?
-
-	// start the actual capture (yay!) int sequence;
-	res = ACameraCaptureSession_setRepeatingRequest( session, &capture_callbacks, 1, requests, NULL );  PrintCameraDeviceError(res);// &sequence );
-}
-
-
-void stop_camera() {
-
-	ACameraCaptureSession_stopRepeating(session);
-
-	ACaptureRequest_free(requests[0]);
-	ACameraCaptureSession_close(session);
-	ACameraOutputTarget_free(target);
-
-	ACaptureSessionOutput_free(output);
-	ACaptureSessionOutputContainer_free(outputs);
-
-	AImageReader_delete(reader);
-	ACameraDevice_close(device);
-	ACameraManager_delete(manager);
-}
-
 
 
 // --------------------------------------------------------------------------
@@ -130,6 +33,7 @@ extern "C" void SetTextureFromUnity(void* textureHandle, int w, int h)
 	g_TextureWidth = w;
 	g_TextureHeight = h;
 
+	open_camera(1280,720);
 	start_camera();
 }
 
@@ -187,8 +91,7 @@ static void ModifyTexturePixels()
 
 static void OnRenderEvent(int eventID)
 {
-	AImage* image;
-	int status = AImageReader_acquireLatestImage( reader, &image );
+	AImage* image = acquire_image();
 
 	if (image) {
 		int32_t height,np;
@@ -196,8 +99,7 @@ static void OnRenderEvent(int eventID)
 		AImage_getNumberOfPlanes(image,&np);
 		LOGI("image height: %d, planes: %d",height,np);
 
-		uint8_t* data; int length;
-		AImage_getPlaneData(image, 0, &data, &length );
+		uint8_t* data = get_image_plane(image,0);
 
 		GLuint gltex = (GLuint)(size_t)(g_TextureHandle);
 		// Update texture data, and free the memory buffer
@@ -207,7 +109,7 @@ static void OnRenderEvent(int eventID)
 	}
 
 	// return the buffer for reuse (important!)
-	AImage_delete(image);
+	release_image(image);
 }
 
 // --------------------------------------------------------------------------
