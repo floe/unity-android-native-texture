@@ -19,7 +19,8 @@ ACameraManager* manager;
 ACameraDevice* device;
 AImageReader* reader;
 ANativeWindow* window;
-ACaptureSessionOutput* target;
+ACaptureSessionOutput* output;
+ACameraOutputTarget* target;
 ACaptureSessionOutputContainer* outputs;
 ACameraCaptureSession* session;
 ACaptureRequest* requests[1];
@@ -59,28 +60,32 @@ static ACameraCaptureSession_captureCallbacks capture_callbacks = {
 void start_camera() {
 
 	manager = ACameraManager_create();
-	PrintCameras(manager);
+	//PrintCameras(manager);
 
-	ACameraManager_openCamera( manager, "0", &camera_callbacks, &device );
+	int res = ACameraManager_openCamera( manager, "0", &camera_callbacks, &device ); PrintCameraDeviceError(res);
 
 	// ImageReader -> NativeWindow -> SessionOutput
-	AImageReader_new( 1280, 720, AIMAGE_FORMAT_YUV_420_888, 1, &reader );
-	AImageReader_getWindow( reader, &window ); // no need to free/release
-	ACaptureSessionOutput_create( window, &target );
+	res = AImageReader_new( 1280, 720, AIMAGE_FORMAT_YUV_420_888, 2, &reader ); PrintCameraDeviceError(res);
+	res = AImageReader_getWindow( reader, &window );  PrintCameraDeviceError(res);// no need to free/release
+	res = ACaptureSessionOutput_create( window, &output ); PrintCameraDeviceError(res);
 	// TODO: set callback on image reader
 
-	// create an output container with a single target
-	ACaptureSessionOutputContainer_create( &outputs );
-	ACaptureSessionOutputContainer_add( outputs, target );
+	// create an output container with a single output
+	res = ACaptureSessionOutputContainer_create( &outputs ); PrintCameraDeviceError(res);
+	res = ACaptureSessionOutputContainer_add( outputs, output ); PrintCameraDeviceError(res);
 
 	// create the capture session & repeating request
-	ACameraDevice_createCaptureSession( device, outputs, &session_callbacks, &session );
-	ACameraDevice_createCaptureRequest( device, TEMPLATE_PREVIEW, requests );
+	res = ACameraDevice_createCaptureSession( device, outputs, &session_callbacks, &session ); PrintCameraDeviceError(res);
+	res = ACameraDevice_createCaptureRequest( device, TEMPLATE_PREVIEW, requests ); PrintCameraDeviceError(res);
+
+	// add target window to request, too
+	res = ACameraOutputTarget_create( window, &target ); PrintCameraDeviceError(res);
+	res = ACaptureRequest_addTarget( requests[0], target ); PrintCameraDeviceError(res);
 
 	// TODO: tweak the capture request?
 
 	// start the actual capture (yay!) int sequence;
-	ACameraCaptureSession_setRepeatingRequest( session, &capture_callbacks, 1, requests, NULL ); // &sequence );
+	res = ACameraCaptureSession_setRepeatingRequest( session, &capture_callbacks, 1, requests, NULL );  PrintCameraDeviceError(res);// &sequence );
 }
 
 
@@ -90,8 +95,9 @@ void stop_camera() {
 
 	ACaptureRequest_free(requests[0]);
 	ACameraCaptureSession_close(session);
+	ACameraOutputTarget_free(target);
 
-	ACaptureSessionOutput_free(target);
+	ACaptureSessionOutput_free(output);
 	ACaptureSessionOutputContainer_free(outputs);
 
 	AImageReader_delete(reader);
@@ -124,9 +130,7 @@ extern "C" void SetTextureFromUnity(void* textureHandle, int w, int h)
 	g_TextureWidth = w;
 	g_TextureHeight = h;
 
-	manager = ACameraManager_create();
-	PrintCameras(manager);
-	ACameraManager_delete(manager);
+	start_camera();
 }
 
 static void ModifyTexturePixels()
@@ -183,7 +187,27 @@ static void ModifyTexturePixels()
 
 static void OnRenderEvent(int eventID)
 {
-	ModifyTexturePixels();
+	AImage* image;
+	int status = AImageReader_acquireLatestImage( reader, &image );
+
+	if (image) {
+		int32_t height,np;
+		AImage_getHeight(image,&height);
+		AImage_getNumberOfPlanes(image,&np);
+		LOGI("image height: %d, planes: %d",height,np);
+
+		uint8_t* data; int length;
+		AImage_getPlaneData(image, 0, &data, &length );
+
+		GLuint gltex = (GLuint)(size_t)(g_TextureHandle);
+		// Update texture data, and free the memory buffer
+		glBindTexture(GL_TEXTURE_2D, gltex);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+	}
+
+	// return the buffer for reuse (important!)
+	AImage_delete(image);
 }
 
 // --------------------------------------------------------------------------
