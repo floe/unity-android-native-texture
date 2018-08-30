@@ -5,9 +5,6 @@ using System.Runtime.InteropServices;
 
 public class CallNativeCode : MonoBehaviour {
 
-	[DllImport("native")]
-	private static extern float add(float x, float y);
-
 	[DllImport ("native")]
 	private static extern void SetTextureFromUnity(System.IntPtr texture, int w, int h);
 
@@ -38,13 +35,6 @@ public class CallNativeCode : MonoBehaviour {
 			// For our simple plugin, it does not matter which ID we pass here.
 			GL.IssuePluginEvent(GetRenderEventFunc(), 1);
 		}
-	}
-
-	void OnGUI ()
-	{
-		float x = 3;
-		float y = 10;
-		GUI.Label (new Rect (15, 125, 450, 100), "adding " + x  + " and " + y + " in native code equals " + add(x,y));
 	}
 
 	private void CreateTextureAndPassToPlugin()
