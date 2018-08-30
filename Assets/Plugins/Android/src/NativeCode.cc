@@ -94,7 +94,3 @@ extern "C" UnityRenderingEvent GetRenderEventFunc()
 	return OnRenderEvent;
 }
 
-extern "C" float add(float x, float y)
-{
-	return x + y;
-}
