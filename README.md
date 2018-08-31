@@ -3,7 +3,12 @@
 Minimal example of how to dynamically update a texture in Unity on Android from native C++ code.  
 Should also work on Linux deployments with minimal changes, not tested yet.
 
-Note: before deploying the Unity project, you need to build the native library in `Assets/Plugins/Android/src/` by running `build_plugin.sh`. This uses the old-style ndk-build process, should be upgraded to CMake and properly integrated with Unity at some point.
+Note: before deploying the Unity project, you need to build the native library in `Assets/Plugins/Android/src/` by setting `$ANDROID_NDK_ROOT` and running `build_plugin.sh`. This uses the old-style ndk-build process, should be upgraded to CMake and properly integrated with Unity at some point.
+
+Branches:
+  - `master`: a procedural texture in C passed to Unity
+  - `camera`: a live camera view from the NDK -> Unity
+  - `opencv`: live camera view processed with OpenCV -> Unity
 
 Built/tested with:
   - Unity 2018.2.4f1
