@@ -13,8 +13,8 @@ Branches:
 Built/tested with:
   - Unity 2018.2.4f1
   - Android NDK r15c
-  - Android 8.0 Oreo
-  - API level 24
+  - Android 8.0 Oreo (API level >= 24)
+  - OpenCV for Android 3.4.1
 
 Sources:
   - https://docs.unity3d.com/Manual/AndroidNativePlugins.html
