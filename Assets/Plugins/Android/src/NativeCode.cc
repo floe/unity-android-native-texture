@@ -5,6 +5,10 @@
 
 #include <media/NdkImage.h>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+using namespace cv;
+
 #include "camera_wrapper.h"
 
 typedef void (*UnityRenderingEvent)(int eventId);
@@ -99,12 +103,19 @@ static void OnRenderEvent(int eventID)
 		AImage_getNumberOfPlanes(image,&np);
 		LOGI("image height: %d, planes: %d",height,np);
 
-		uint8_t* data = get_image_plane(image,0);
+		uint8_t* ydata = get_image_plane(image,0);
+		uint8_t* uvdata = get_image_plane(image,1);
+
+		Mat ymat(720,1280,CV_8UC1,ydata);
+		Mat uvmat(360,640,CV_8UC2,uvdata);
+
+		Mat result(720,1280,CV_8UC4);
+		cvtColorTwoPlane(ymat, uvmat, result, COLOR_YUV2RGBA_NV21);
 
 		GLuint gltex = (GLuint)(size_t)(g_TextureHandle);
 		// Update texture data, and free the memory buffer
 		glBindTexture(GL_TEXTURE_2D, gltex);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1280, 720, GL_RGBA, GL_UNSIGNED_BYTE, result.data);
 
 	}
 
