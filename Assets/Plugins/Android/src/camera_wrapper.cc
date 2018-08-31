@@ -68,6 +68,16 @@ void open_camera( int w, int h, int format ) {
 	CheckCameraError( ACaptureRequest_addTarget( requests[0], target ) );
 
 	// TODO: tweak the capture request?
+	/* right now, we rely on the capture session to select a suitable stream size that's sufficiently
+	   close to the surface size (and for a standard size like 1280x720, this will probably work)
+
+	ACameraMetadata* metadata;
+	ACameraManager_getCameraCharacteristics(m_camera_manager,
+	                                        m_selected_camera_id, &metadata);
+	ACameraMetadata_const_entry entry;
+	ACameraMetadata_getConstEntry( metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
+	// format of the data: format, width, height, input?, type int32
+	*/
 }
 
 void start_camera() {
