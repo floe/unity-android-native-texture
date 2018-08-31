@@ -1,5 +1,9 @@
 include $(CLEAR_VARS)
 
+OPENCV_SDK_ROOT:=/fill/me/in
+OPENCV_INSTALL_MODULES:=on
+include $(OPENCV_SDK_ROOT)/sdk/native/jni/OpenCV.mk
+
 # override strip command to strip all symbols from output library; no need to ship with those..
 # cmd-strip = $(TOOLCHAIN_PREFIX)strip $1 
 
